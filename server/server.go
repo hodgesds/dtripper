@@ -19,14 +19,15 @@ func parseQuery(m *dns.Msg) {
 	for _, q := range m.Question {
 		switch q.Qtype {
 		case dns.TypeTXT:
-			log.Printf("Query for %s\n", q.Name)
+			if *debug {
+				log.Printf("Query for %s\n", q.Name)
+			}
 
 			client := &http.Client{}
-			// res, err := c.Get("https://www.google.com/search?q=dns")
 
 			subs := strings.Split(q.Name, ".")
 			if len(subs) <= 1 {
-				println("no subdomains")
+				log.Println("no subdomains")
 				return
 			}
 
@@ -34,11 +35,13 @@ func parseQuery(m *dns.Msg) {
 
 			decoded, err := base64.StdEncoding.DecodeString(data)
 			if err != nil {
-				println(err.Error())
+				log.Println(err.Error())
 				return
 			}
 
-			fmt.Printf("got request:\n%s", string(decoded))
+			if *debug {
+				fmt.Printf("got request:\n%s", string(decoded))
+			}
 
 			buf := bytes.NewBuffer(decoded)
 
@@ -46,7 +49,7 @@ func parseQuery(m *dns.Msg) {
 
 			req, err := http.ReadRequest(reader)
 			if err != nil {
-				println(err.Error())
+				log.Println(err.Error())
 				return
 			}
 
@@ -60,7 +63,7 @@ func parseQuery(m *dns.Msg) {
 				req.RequestURI,
 			))
 			if err != nil {
-				println(err.Error())
+				log.Println(err.Error())
 				return
 			}
 
@@ -70,14 +73,13 @@ func parseQuery(m *dns.Msg) {
 
 			res, err := client.Do(req)
 			if err != nil {
-				println("client error")
-				println(err.Error())
+				log.Println(err.Error())
 				return
 			}
 
 			rawRes, err := httputil.DumpResponse(res, true)
 			if err != nil {
-				println(err.Error())
+				log.Println(err.Error())
 				return
 			}
 
@@ -103,11 +105,13 @@ func parseQuery(m *dns.Msg) {
 
 			rr, err := dns.NewRR(fmt.Sprintf(`%s 1 IN TXT %s`, q.Name, resStr))
 			if err != nil {
-				println(err.Error())
+				log.Println(err.Error())
 				return
 			}
 			m.Answer = append(m.Answer, rr)
-			fmt.Printf("%+v\n", rr)
+			if *debug {
+				fmt.Printf("%+v\n", rr)
+			}
 		}
 	}
 }
@@ -127,6 +131,7 @@ func handleDnsRequest(w dns.ResponseWriter, r *dns.Msg) {
 
 var port = flag.Int("p", 8053, "port")
 var net = flag.String("net", "tcp", "network (udp or tcp)")
+var debug = flag.Bool("d", false, "debug")
 
 func main() {
 	flag.Parse()

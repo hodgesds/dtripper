@@ -8,6 +8,7 @@ import (
 	"net/http/httputil"
 )
 
+// Serializer is a interface for serializing a http.Request into []byte.
 type Serializer interface {
 	Marshal(*http.Request) ([]byte, error)
 	Unmarshal([]byte) (*http.Response, error)
@@ -41,6 +42,20 @@ func (d DefaultSerializer) Unmarshal(b []byte) (*http.Response, error) {
 
 	buf := bytes.NewBuffer(replyBytes)
 
+	reader := bufio.NewReader(buf)
+
+	return http.ReadResponse(reader, nil)
+}
+
+// RawSerializer is a serializer that serializes the *http.Request as []byte
+type RawSerializer struct{}
+
+func (r RawSerializer) Marshal(req *http.Request) ([]byte, error) {
+	return httputil.DumpRequest(req, true)
+}
+
+func (r RawSerializer) Unmarshal(b []byte) (*http.Response, error) {
+	buf := bytes.NewBuffer(b)
 	reader := bufio.NewReader(buf)
 
 	return http.ReadResponse(reader, nil)
